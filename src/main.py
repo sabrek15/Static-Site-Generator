@@ -1,4 +1,5 @@
 import os
+import sys
 import shutil
 
 # from textnode import TextNode, TextType
@@ -40,7 +41,7 @@ def copy_directory_recursive(source, destination):
         else:
             shutil.copy(src_path, dest_path)
 
-def generate_page(from_path, template_path, dest_path):
+def generate_page(from_path, template_path, dest_path, basepath="/"):
     print(f"Generating page from {from_path} to {dest_path} using {template_path}")
 
     with open(from_path, "r", encoding="utf-8") as f:
@@ -57,6 +58,9 @@ def generate_page(from_path, template_path, dest_path):
     final_html = final_html.replace("{{ Content }}", html_content)
     # print(final_html)
 
+    final_html = final_html.replace('href="/', f'href="{basepath}')
+    final_html = final_html.replace('src="/', f'src="{basepath}')
+
     os.makedirs(os.path.dirname(dest_path), exist_ok=True)
 
     with open(dest_path, "w", encoding="utf-8") as f:
@@ -64,7 +68,7 @@ def generate_page(from_path, template_path, dest_path):
 
     print("Page generated successfull")
 
-def generate_pages_recursive(dir_path, template_path, dest_dir_path):
+def generate_pages_recursive(dir_path, template_path, dest_dir_path, basepath):
     if not os.path.exists(dir_path):
         print("content directory doesnot exist")
         return
@@ -74,29 +78,31 @@ def generate_pages_recursive(dir_path, template_path, dest_dir_path):
         dest_item_path = os.path.join(dest_dir_path, item.replace(".md", ".html"))
 
         if os.path.isdir(item_path):
-            generate_pages_recursive(item_path, template_path, dest_item_path)
+            generate_pages_recursive(item_path, template_path, dest_item_path, basepath)
         elif item.endswith(".md"):
-            generate_page(item_path, template_path, dest_item_path)
+            generate_page(item_path, template_path, dest_item_path, basepath)
 
-def sync_static_to_public():
+def sync_static_to_public(basepath):
     source_static = os.path.join(ROOT_DIR, "static")
-    destination_public = os.path.join(ROOT_DIR, "public")
+    destination_docs = os.path.join(ROOT_DIR, "docs")
     content_md = os.path.join(ROOT_DIR, "content")
     template_path = os.path.join(ROOT_DIR, "template.html")
     # output_html = os.path.join(destination_public, "index.html")
 
     print("Clearing the public directory...")
-    clear_directory(destination_public)
+    clear_directory(destination_docs)
 
-    print(f"Copying from {source_static} to {destination_public}...")
-    copy_directory_recursive(source_static, destination_public)
+    print(f"Copying from {source_static} to {destination_docs}...")
+    copy_directory_recursive(source_static, destination_docs)
 
-    print(f"Generating the index page...")
-    generate_pages_recursive(content_md, template_path, destination_public)
+    print(f"Generating the site pages...")
+    generate_pages_recursive(content_md, template_path, destination_docs, basepath)
 
 
 def main():
-    sync_static_to_public()
+    basepath = sys.argv[1] if len(sys.argv) > 1 else '/'
+    print(basepath)
+    sync_static_to_public(basepath)
 
 if __name__ == "__main__":
     main()
